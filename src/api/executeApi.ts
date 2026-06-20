@@ -1,12 +1,6 @@
 import axios from 'axios'
 import type { ChatAction, TelemetryData } from '../types/chat'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-
-const apiClient = axios.create({
-  baseURL: API_URL,
-  timeout: 30000,
-})
+import { apiClient, normalizeBackendResponse, type BackendWebhookResponse } from './backendApi'
 
 export interface ExecuteResult {
   message: string
@@ -15,20 +9,16 @@ export interface ExecuteResult {
 
 export async function executeApi(action: ChatAction): Promise<ExecuteResult> {
   try {
-    // POST to /api/execute with the action command
-    const response = await apiClient.post<{
-      message: string
-      telemetry_patch?: Partial<TelemetryData>
-    }>('/api/execute', {
+    const response = await apiClient.post<BackendWebhookResponse>('/execute', {
       action: action.action,
       description: action.description,
     })
 
-    const { message, telemetry_patch } = response.data
+    const normalizedResponse = normalizeBackendResponse(action.description, response.data)
 
     return {
-      message,
-      telemetryPatch: telemetry_patch || {},
+      message: normalizedResponse.response,
+      telemetryPatch: normalizedResponse.telemetry,
     }
   } catch (error) {
     console.error('Execute API error:', error)

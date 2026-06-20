@@ -1,12 +1,6 @@
 import axios from 'axios'
-import type { ChatAction, ChatResponse, TelemetryData } from '../types/chat'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-
-const apiClient = axios.create({
-  baseURL: API_URL,
-  timeout: 30000,
-})
+import type { ChatResponse } from '../types/chat'
+import { apiClient, normalizeBackendResponse, type BackendWebhookResponse } from './backendApi'
 
 // Convert text response to a streaming ReadableStream for word-by-word display
 const buildStream = (text: string) =>
@@ -31,26 +25,15 @@ export interface ChatApiResult {
 
 export async function chatApi(message: string): Promise<ChatApiResult> {
   try {
-    // POST to /api/chat with user message
-    const response = await apiClient.post<{
-      response: string
-      thoughts: string[]
-      telemetry: TelemetryData
-      actions: ChatAction[]
-    }>('/api/chat', {
+    const response = await apiClient.post<BackendWebhookResponse>('/chat', {
       message,
     })
 
-    const { response: assistantText, thoughts, telemetry, actions } = response.data
+    const normalizedResponse = normalizeBackendResponse(message, response.data)
 
     return {
-      stream: buildStream(assistantText),
-      response: {
-        response: assistantText,
-        thoughts,
-        telemetry,
-        actions,
-      },
+      stream: buildStream(normalizedResponse.response),
+      response: normalizedResponse,
     }
   } catch (error) {
     console.error('Chat API error:', error)
