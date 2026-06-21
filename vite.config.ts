@@ -6,16 +6,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api/chat': {
+      '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
-        rewrite: () => '/webhook',
-      },
-      '/api/execute': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        rewrite: () => '/webhook',
-      },
-    },
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
   },
 })
